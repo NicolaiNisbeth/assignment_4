@@ -1,3 +1,4 @@
+
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include <stdio.h>
@@ -6,10 +7,11 @@
 #include <time.h>
 #include <math.h>
 
+#include "configurationFile.c"
+
 #define PIXEL(frame, W, x, y) (frame+(y)*3*(W)+(x)*3) //https://answers.opencv.org/question/12963/how-to-get-pixels-value-from-a-picture/
 #define MeanRGB(r, g, b) ((r + g + b) / 3)
 
-//TODO: maybe in header file?
 const char *months[] = {
         "January", "February", "March", "April", "May", "June", "July",
         "August", "September", "October", "November", "December", NULL
@@ -34,12 +36,14 @@ int main (void ) {
     int numOfEvents = 0, numOfFrames = 0;
     int rows, cols;
     int curIntensMean, prevIntensMean;
-    //int c;
+    int c;
+
+    readConfigurations(); // From configurationFile
 
     capture = cvCaptureFromCAM( 0 );
     //cvNamedWindow("Video", CV_WINDOW_AUTOSIZE);
-    //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 400);
-    //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 300);
+    //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 50);
+    //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 50);
     cvSetCaptureProperty(capture, CV_CAP_PROP_FPS, FPS);
 
     if (capture){
@@ -51,7 +55,7 @@ int main (void ) {
             numOfFrames++;
 
             // shutdown program post 150 frames to avoid overheating
-            if (numOfFrames > 150){break;}
+            //if (numOfFrames > 150){break;}
 
             // wait 5 seconds after camera starts for adjusting etc..
             if (numOfFrames > (FPS * 5)){
@@ -64,8 +68,10 @@ int main (void ) {
             cols = frame->width;
             for (int row = 0; row < rows; row++){
                 for (int col = 0; col < cols; col++){
-                    pixel = PIXEL(frame->imageData, frame->nChannels, row, col);
-                    intensitySum += MeanRGB(pixel[0], pixel[1], pixel[2]);
+                    if (isPixelValid(row, col)){ // From configurationFile
+                        pixel = PIXEL(frame->imageData, frame->nChannels, row, col);
+                        intensitySum += MeanRGB(pixel[0], pixel[1], pixel[2]);
+                    }
                     //pixel++;
                 }
             }
@@ -103,11 +109,11 @@ int main (void ) {
             prevIntensMean = curIntensMean;
 
             //cvShowImage("Video", frame);
-            /*
+
             c = cvWaitKey(10);
             if ((char) c == 'c'){
                 break;
-            }*/
+            }
         }
     }
     else {
@@ -116,6 +122,8 @@ int main (void ) {
 
     cvReleaseImage(&frame);
     cvReleaseCapture (&capture);
+    free(xIntervals);
+    free(yIntervals);
     //cvDestroyWindow("Video");
 }
 
